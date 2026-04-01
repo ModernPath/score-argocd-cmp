@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ConfigManagementPlugin
+metadata:
+  name: score-k8s
+spec:
+  version: v1.0
+  discover:
+    find:
+      command: ["sh", "-c"]
+      args: ["find . -maxdepth 1 -name 'score.yaml' | head -1 | grep -q ."]
+  init:
+    command: ["sh", "-c"]
+    args:
+      - |
+        score-k8s init --no-sample \
+          --provisioners /opt/provisioners/*.provisioners.yaml
+  generate:
+    command: ["sh", "-c"]
+    args:
+      - |
+        score-k8s generate score.yaml \
+          --image "${ARGOCD_ENV_IMAGE:-placeholder:latest}" \
+          --namespace "${ARGOCD_ENV_NAMESPACE:-default}" \
+          -o - 2>/dev/null

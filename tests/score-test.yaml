@@ -1,0 +1,11 @@
+apiVersion: score.dev/v1b1
+metadata:
+  name: test-app
+containers:
+  web:
+    image: .
+service:
+  ports:
+    http:
+      port: 80
+      targetPort: 8080
