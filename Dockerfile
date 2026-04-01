@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 ARG SCORE_K8S_VERSION=0.10.3
 
 RUN apk add --no-cache git && \
