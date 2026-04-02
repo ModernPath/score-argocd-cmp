@@ -18,7 +18,7 @@
     {{ $port := index $ports (print .Params.port) }}
     {{ if not $port.TargetPort }}{{ fail "params.port is not a named service port" }}{{ end }}
     gatewayNamespace: default
-    gatewayName: external-gateway
+    gatewayName: gw-plat-test-cluster-workload-gateway
     pathRewrite: {{ dig "pathRewrite" "" .Params | quote }}
   state: |
     routeName: route-{{ .SourceWorkload }}-{{ substr 0 8 .Guid | lower }}
