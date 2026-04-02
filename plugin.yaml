@@ -5,9 +5,7 @@ metadata:
 spec:
   version: v1.0
   discover:
-    find:
-      command: ["sh", "-c"]
-      args: ["find . -maxdepth 1 -name '*.score.yaml' | head -1 | grep -q ."]
+    fileName: "*.score.yaml"
   init:
     command: ["sh", "-c"]
     args:
