@@ -59,4 +59,4 @@
           {{ end }}
           backendRefs:
           - name: {{ (index .WorkloadServices .SourceWorkload).ServiceName }}
-            port: {{ .Params.port | atoi }}
+            port: {{ (index (index .WorkloadServices .SourceWorkload).Ports (print .Params.port)).TargetPort }}
