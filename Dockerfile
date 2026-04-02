@@ -5,7 +5,8 @@ RUN apk add --no-cache git && \
     go install github.com/score-spec/score-k8s/cmd/score-k8s@${SCORE_K8S_VERSION}
 
 FROM alpine:3.23
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates bash
 COPY --from=builder /go/bin/score-k8s /usr/local/bin/score-k8s
 COPY provisioners/ /opt/provisioners/
+COPY plugin.yaml /home/argocd/cmp-server/config/plugin.yaml
 USER 999

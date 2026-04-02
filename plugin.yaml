@@ -7,18 +7,27 @@ spec:
   discover:
     find:
       command: ["sh", "-c"]
-      args: ["find . -maxdepth 1 -name 'score.yaml' | head -1 | grep -q ."]
+      args: ["find . -maxdepth 1 -name '*.score.yaml' | head -1 | grep -q ."]
   init:
     command: ["sh", "-c"]
     args:
       - |
-        score-k8s init --no-sample \
-          --provisioners /opt/provisioners/*.provisioners.yaml
+        PROV_FLAGS=""
+        for f in /opt/provisioners/*.provisioners.yaml; do
+          [ -f "$f" ] && PROV_FLAGS="$PROV_FLAGS --provisioners $f"
+        done
+        score-k8s init --no-sample $PROV_FLAGS
   generate:
-    command: ["sh", "-c"]
+    command: ["bash", "-c"]
     args:
       - |
-        score-k8s generate score.yaml \
-          --image "${ARGOCD_ENV_IMAGE:-placeholder:latest}" \
-          --namespace "${ARGOCD_ENV_NAMESPACE:-default}" \
-          -o - 2>/dev/null
+        for f in *.score.yaml; do
+          workload="${f%.score.yaml}"
+          img_var="ARGOCD_ENV_IMAGE_${workload}"
+          img="${!img_var:-${ARGOCD_ENV_IMAGE:-placeholder:latest}}"
+          score-k8s generate "$f" \
+            --image "$img" \
+            --namespace "${ARGOCD_ENV_NAMESPACE:-default}" \
+            2>/dev/null
+        done
+        cat manifests.yaml
