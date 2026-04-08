@@ -6,7 +6,7 @@ spec:
   version: v1.0
   discover:
     find:
-      command: ["score-cmp", "discover"]
+      command: ["score-argocd-cmp", "discover"]
   parameters:
     static:
       - name: provisioners-url
@@ -18,26 +18,8 @@ spec:
         required: false
         string: "latest"
     dynamic:
-      command: ["score-cmp", "discover-params"]
+      command: ["score-argocd-cmp", "discover-params"]
   init:
-    command: ["sh", "-c"]
-    args:
-      - |
-        PROV_FLAGS=""
-        if [ -n "${PARAM_PROVISIONERS_URL:-}" ]; then
-          VERSION="${PARAM_PROVISIONERS_VERSION:-latest}"
-          PROV_FLAGS="--provisioners ${PARAM_PROVISIONERS_URL}:${VERSION}"
-        fi
-        score-k8s init --no-sample $PROV_FLAGS
+    command: ["score-argocd-cmp", "init"]
   generate:
-    command: ["bash", "-c"]
-    args:
-      - |
-        for f in $(score-cmp discover); do
-          img=$(score-cmp resolve-image "$f")
-          score-k8s generate "$f" \
-            --image "$img" \
-            --namespace "${ARGOCD_APP_NAMESPACE:-default}" \
-            2>/dev/null
-        done
-        cat manifests.yaml
+    command: ["score-argocd-cmp", "generate"]

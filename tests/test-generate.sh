@@ -9,9 +9,9 @@ docker run --rm "$IMAGE" score-k8s --version
 echo "PASS"
 
 echo ""
-echo "=== Test 2: score-cmp binary exists ==="
-docker run --rm "$IMAGE" score-cmp 2>&1 || true
-docker run --rm "$IMAGE" which score-cmp
+echo "=== Test 2: score-argocd-cmp binary exists ==="
+docker run --rm "$IMAGE" score-argocd-cmp 2>&1 || true
+docker run --rm "$IMAGE" which score-argocd-cmp
 echo "PASS"
 
 echo ""
@@ -30,7 +30,7 @@ OUTPUT=$(docker run --rm \
   -v "${SCRIPT_DIR}/score-test.yaml:/work/score.yaml:ro" \
   --user 999 \
   "$IMAGE" \
-  sh -c 'cd /work && score-cmp discover-params')
+  sh -c 'cd /work && score-argocd-cmp discover-params')
 if echo "$OUTPUT" | grep -q '"name":"image"'; then
   echo "PASS: single mode outputs image parameter"
 else
@@ -46,7 +46,7 @@ OUTPUT=$(docker run --rm \
   -v "${SCRIPT_DIR}/frontend.score.yaml:/work/frontend.score.yaml:ro" \
   --user 999 \
   "$IMAGE" \
-  sh -c 'cd /work && score-cmp discover-params')
+  sh -c 'cd /work && score-argocd-cmp discover-params')
 if echo "$OUTPUT" | grep -q '"image-backend"' && echo "$OUTPUT" | grep -q '"image-frontend"'; then
   echo "PASS: multi mode outputs image-backend and image-frontend"
 else
@@ -57,7 +57,7 @@ fi
 
 echo ""
 echo "=== Test 7: discover-params — 0 files errors ==="
-if docker run --rm --user 999 "$IMAGE" sh -c 'cd /work && score-cmp discover-params' 2>/dev/null; then
+if docker run --rm --user 999 "$IMAGE" sh -c 'cd /work && score-argocd-cmp discover-params' 2>/dev/null; then
   echo "FAIL: expected non-zero exit for 0 score files"
   exit 1
 else
@@ -74,13 +74,8 @@ OUTPUT=$(docker run --rm \
   "$IMAGE" \
   sh -c '
     cd /work &&
-    score-k8s init --no-sample 2>/dev/null &&
-    img=$(score-cmp resolve-image score.yaml) &&
-    score-k8s generate score.yaml \
-      --image "$img" \
-      --namespace "${ARGOCD_APP_NAMESPACE:-default}" \
-      2>/dev/null &&
-    cat manifests.yaml
+    score-argocd-cmp init &&
+    score-argocd-cmp generate
   ')
 
 if echo "$OUTPUT" | grep -q "apiVersion"; then
@@ -136,15 +131,8 @@ OUTPUT=$(docker run --rm \
   bash -c "
     cp /src/*.score.yaml /work/ 2>/dev/null; cp /src/provisioners/* /work/ 2>/dev/null || true
     cd /work &&
-    score-k8s init --no-sample $PROV_INIT_FLAGS 2>/dev/null &&
-    for f in *.score.yaml; do
-      img=\$(score-cmp resolve-image \"\$f\")
-      score-k8s generate \"\$f\" \
-        --image \"\$img\" \
-        --namespace \"\${ARGOCD_APP_NAMESPACE:-default}\" \
-        2>/dev/null
-    done
-    cat manifests.yaml
+    score-argocd-cmp init $PROV_INIT_FLAGS &&
+    score-argocd-cmp generate
   ")
 
 if echo "$OUTPUT" | grep -q "my-registry/backend:v1.0"; then

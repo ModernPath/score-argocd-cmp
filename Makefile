@@ -2,12 +2,15 @@ IMAGE_NAME ?= score-argocd-cmp
 IMAGE_TAG ?= latest
 SCORE_K8S_VERSION ?= latest
 
-.PHONY: build test go-test clean
+.PHONY: build go-build test go-test clean
 
 build:
 	docker build \
 		--build-arg SCORE_K8S_VERSION=$(SCORE_K8S_VERSION) \
 		-t $(IMAGE_NAME):$(IMAGE_TAG) .
+
+go-build:
+	go build -o score-argocd-cmp ./cmd/score-argocd-cmp
 
 go-test:
 	go test ./...
