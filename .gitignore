@@ -2,4 +2,4 @@
 .DS_Store
 .score-k8s/
 manifests.yaml
-score-argocd-cmp
+/score-argocd-cmp
