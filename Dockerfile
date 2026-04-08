@@ -14,9 +14,9 @@ RUN CGO_ENABLED=0 go build -o /go/bin/score-argocd-cmp ./cmd/score-argocd-cmp
 
 FROM alpine:3.23
 RUN apk add --no-cache ca-certificates bash
+COPY --from=builder /go/bin/docker-credential-gcr /usr/local/bin/docker-credential-gcr
 COPY --from=builder /go/bin/score-k8s /usr/local/bin/score-k8s
 COPY --from=builder /go/bin/score-argocd-cmp /usr/local/bin/score-argocd-cmp
-COPY --from=builder /go/bin/docker-credential-gcr /usr/local/bin/docker-credential-gcr
 COPY plugin.yaml /home/argocd/cmp-server/config/plugin.yaml
 COPY --chown=999:999 --chmod=600 docker-config.json /.docker/config.json
 RUN mkdir /work && chown 999:999 /work
