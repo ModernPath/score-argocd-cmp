@@ -5,27 +5,39 @@ metadata:
 spec:
   version: v1.0
   discover:
-    fileName: "*.score.yaml"
+    find:
+      command: ["score-cmp", "discover"]
+  parameters:
+    static:
+      - name: provisioners-url
+        title: Provisioners OCI URL (without version tag)
+        required: true
+        string: ""
+      - name: provisioners-version
+        title: Provisioners version tag
+        required: false
+        string: "latest"
+    dynamic:
+      command: ["score-cmp", "discover-params"]
   init:
     command: ["sh", "-c"]
     args:
       - |
         PROV_FLAGS=""
-        for f in /opt/provisioners/*.provisioners.yaml; do
-          [ -f "$f" ] && PROV_FLAGS="$PROV_FLAGS --provisioners $f"
-        done
+        if [ -n "${PARAM_PROVISIONERS_URL:-}" ]; then
+          VERSION="${PARAM_PROVISIONERS_VERSION:-latest}"
+          PROV_FLAGS="--provisioners ${PARAM_PROVISIONERS_URL}:${VERSION}"
+        fi
         score-k8s init --no-sample $PROV_FLAGS
   generate:
     command: ["bash", "-c"]
     args:
       - |
-        for f in *.score.yaml; do
-          workload="${f%.score.yaml}"
-          img_var="ARGOCD_ENV_IMAGE_${workload}"
-          img="${!img_var:-${ARGOCD_ENV_IMAGE:-placeholder:latest}}"
+        for f in $(score-cmp discover); do
+          img=$(score-cmp resolve-image "$f")
           score-k8s generate "$f" \
             --image "$img" \
-            --namespace "${ARGOCD_ENV_NAMESPACE:-default}" \
+            --namespace "${ARGOCD_APP_NAMESPACE:-default}" \
             2>/dev/null
         done
         cat manifests.yaml

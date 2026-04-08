@@ -9,30 +9,78 @@ docker run --rm "$IMAGE" score-k8s --version
 echo "PASS"
 
 echo ""
-echo "=== Test 2: provisioners directory exists ==="
-docker run --rm "$IMAGE" ls /opt/provisioners/
+echo "=== Test 2: score-cmp binary exists ==="
+docker run --rm "$IMAGE" score-cmp 2>&1 || true
+docker run --rm "$IMAGE" which score-cmp
 echo "PASS"
 
 echo ""
-echo "=== Test 3: plugin.yaml is in the correct location ==="
+echo "=== Test 3: score-k8s supports --provisioners flag ==="
+docker run --rm "$IMAGE" score-k8s init --help 2>&1 | grep -q "\-\-provisioners"
+echo "PASS"
+
+echo ""
+echo "=== Test 4: plugin.yaml is in the correct location ==="
 docker run --rm "$IMAGE" cat /home/argocd/cmp-server/config/plugin.yaml | grep -q "score-k8s"
 echo "PASS"
 
 echo ""
-echo "=== Test 4: single score file — init + generate cycle ==="
+echo "=== Test 5: discover-params — single score.yaml ==="
 OUTPUT=$(docker run --rm \
-  -v "${SCRIPT_DIR}/score-test.yaml:/src/score-test.yaml:ro" \
-  -e ARGOCD_ENV_IMAGE=nginx:1.25 \
-  -e ARGOCD_ENV_NAMESPACE=test-ns \
+  -v "${SCRIPT_DIR}/score-test.yaml:/work/score.yaml:ro" \
+  --user 999 \
+  "$IMAGE" \
+  sh -c 'cd /work && score-cmp discover-params')
+if echo "$OUTPUT" | grep -q '"name":"image"'; then
+  echo "PASS: single mode outputs image parameter"
+else
+  echo "FAIL: expected image parameter"
+  echo "Output: $OUTPUT"
+  exit 1
+fi
+
+echo ""
+echo "=== Test 6: discover-params — multiple *.score.yaml ==="
+OUTPUT=$(docker run --rm \
+  -v "${SCRIPT_DIR}/backend.score.yaml:/work/backend.score.yaml:ro" \
+  -v "${SCRIPT_DIR}/frontend.score.yaml:/work/frontend.score.yaml:ro" \
+  --user 999 \
+  "$IMAGE" \
+  sh -c 'cd /work && score-cmp discover-params')
+if echo "$OUTPUT" | grep -q '"image-backend"' && echo "$OUTPUT" | grep -q '"image-frontend"'; then
+  echo "PASS: multi mode outputs image-backend and image-frontend"
+else
+  echo "FAIL: expected image-backend and image-frontend"
+  echo "Output: $OUTPUT"
+  exit 1
+fi
+
+echo ""
+echo "=== Test 7: discover-params — 0 files errors ==="
+if docker run --rm --user 999 "$IMAGE" sh -c 'cd /work && score-cmp discover-params' 2>/dev/null; then
+  echo "FAIL: expected non-zero exit for 0 score files"
+  exit 1
+else
+  echo "PASS: exits non-zero for 0 score files"
+fi
+
+echo ""
+echo "=== Test 8: single score file — init + generate cycle ==="
+OUTPUT=$(docker run --rm \
+  -v "${SCRIPT_DIR}/score-test.yaml:/work/score.yaml:ro" \
+  -e ARGOCD_APP_PARAMETERS='[{"name":"image","string":"nginx:1.25"}]' \
+  -e ARGOCD_APP_NAMESPACE=test-ns \
   --user 999 \
   "$IMAGE" \
   sh -c '
-    cp /src/score-test.yaml /tmp/score.yaml && cd /tmp &&
+    cd /work &&
     score-k8s init --no-sample 2>/dev/null &&
+    img=$(score-cmp resolve-image score.yaml) &&
     score-k8s generate score.yaml \
-      --image "${ARGOCD_ENV_IMAGE}" \
-      --namespace "${ARGOCD_ENV_NAMESPACE}" \
-      -o - 2>/dev/null
+      --image "$img" \
+      --namespace "${ARGOCD_APP_NAMESPACE:-default}" \
+      2>/dev/null &&
+    cat manifests.yaml
   ')
 
 if echo "$OUTPUT" | grep -q "apiVersion"; then
@@ -59,34 +107,45 @@ else
 fi
 
 echo ""
-echo "=== Test 5: multi-workload generation with per-workload images ==="
+echo "=== Test 9: multi-workload generation with per-workload images ==="
+PROV_DIR="$(cd "${SCRIPT_DIR}/../provisioners" 2>/dev/null && pwd || echo "")"
+if [ -z "$PROV_DIR" ] || [ ! -d "$PROV_DIR" ]; then
+  echo "SKIP: provisioners directory not found (expected in ../provisioners or mount externally)"
+  echo "To run this test, provide provisioners via PROVISIONERS_DIR env var"
+  PROV_DIR="${PROVISIONERS_DIR:-}"
+fi
+
+PROV_VOLUMES=""
+PROV_INIT_FLAGS=""
+if [ -n "$PROV_DIR" ] && [ -d "$PROV_DIR" ]; then
+  for f in "$PROV_DIR"/*.provisioners.yaml; do
+    [ -f "$f" ] && PROV_VOLUMES="$PROV_VOLUMES -v $f:/src/provisioners/$(basename $f):ro"
+    [ -f "$f" ] && PROV_INIT_FLAGS="$PROV_INIT_FLAGS --provisioners /src/provisioners/$(basename $f)"
+  done
+fi
+
 OUTPUT=$(docker run --rm \
   -v "${SCRIPT_DIR}/backend.score.yaml:/src/backend.score.yaml:ro" \
   -v "${SCRIPT_DIR}/frontend.score.yaml:/src/frontend.score.yaml:ro" \
-  -e ARGOCD_ENV_IMAGE_backend=my-registry/backend:v1.0 \
-  -e ARGOCD_ENV_IMAGE_frontend=my-registry/frontend:v2.0 \
-  -e ARGOCD_ENV_NAMESPACE=multi-ns \
+  $PROV_VOLUMES \
+  -e ARGOCD_APP_PARAMETERS='[{"name":"image-backend","string":"my-registry/backend:v1.0"},{"name":"image-frontend","string":"my-registry/frontend:v2.0"}]' \
+  -e ARGOCD_APP_NAMESPACE=multi-ns \
   -e ARGOCD_ENV_DOMAIN=app.example.com \
   --user 999 \
   "$IMAGE" \
-  bash -c '
-    cp /src/*.score.yaml /tmp/ && cd /tmp &&
-    PROV_FLAGS="" &&
-    for f in /opt/provisioners/*.provisioners.yaml; do
-      [ -f "$f" ] && PROV_FLAGS="$PROV_FLAGS --provisioners $f"
-    done &&
-    score-k8s init --no-sample $PROV_FLAGS 2>/dev/null &&
+  bash -c "
+    cp /src/*.score.yaml /work/ 2>/dev/null; cp /src/provisioners/* /work/ 2>/dev/null || true
+    cd /work &&
+    score-k8s init --no-sample $PROV_INIT_FLAGS 2>/dev/null &&
     for f in *.score.yaml; do
-      workload="${f%.score.yaml}"
-      img_var="ARGOCD_ENV_IMAGE_${workload}"
-      img="${!img_var:-${ARGOCD_ENV_IMAGE:-placeholder:latest}}"
-      score-k8s generate "$f" \
-        --image "$img" \
-        --namespace "${ARGOCD_ENV_NAMESPACE:-default}" \
+      img=\$(score-cmp resolve-image \"\$f\")
+      score-k8s generate \"\$f\" \
+        --image \"\$img\" \
+        --namespace \"\${ARGOCD_APP_NAMESPACE:-default}\" \
         2>/dev/null
     done
     cat manifests.yaml
-  ')
+  ")
 
 if echo "$OUTPUT" | grep -q "my-registry/backend:v1.0"; then
   echo "PASS: backend image override applied"
