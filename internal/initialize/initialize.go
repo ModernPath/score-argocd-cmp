@@ -8,7 +8,7 @@ import (
 )
 
 // Run executes score-k8s init with the appropriate provisioners flags
-// derived from PARAM_PROVISIONERS_URL and PARAM_PROVISIONERS_VERSION env vars.
+// derived from PARAM_PROVISIONERS_URL env var.
 // Any extra arguments are passed through to score-k8s init.
 func Run(extra []string) error {
 	args := []string{"init", "--no-sample"}
@@ -17,11 +17,7 @@ func Run(extra []string) error {
 	if url == "" {
 		return fmt.Errorf("PARAM_PROVISIONERS_URL is not set")
 	}
-	version := os.Getenv("PARAM_PROVISIONERS_VERSION")
-	if version == "" {
-		version = "latest"
-	}
-	args = append(args, "--provisioners", url+":"+version)
+	args = append(args, "--provisioners", url)
 
 	args = append(args, extra...)
 

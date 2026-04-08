@@ -10,13 +10,9 @@ spec:
   parameters:
     static:
       - name: provisioners-url
-        title: Provisioners OCI URL (without version tag)
+        title: Provisioners URL
         required: true
         string: ""
-      - name: provisioners-version
-        title: Provisioners version tag
-        required: false
-        string: "latest"
     dynamic:
       command: ["score-argocd-cmp", "discover-params"]
   init:
