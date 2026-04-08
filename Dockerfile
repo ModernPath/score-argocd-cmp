@@ -18,6 +18,7 @@ COPY --from=builder /go/bin/docker-credential-gcr /usr/local/bin/docker-credenti
 COPY --from=builder /go/bin/score-k8s /usr/local/bin/score-k8s
 COPY --from=builder /go/bin/score-argocd-cmp /usr/local/bin/score-argocd-cmp
 COPY plugin.yaml /home/argocd/cmp-server/config/plugin.yaml
+RUN mkdir -p /.docker && chown 999:999 /.docker && chmod 700 /.docker
 COPY --chown=999:999 --chmod=600 docker-config.json /.docker/config.json
 RUN mkdir /work && chown 999:999 /work
 USER 999
