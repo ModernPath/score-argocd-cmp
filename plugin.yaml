@@ -19,3 +19,4 @@ spec:
     command: ["score-argocd-cmp", "init"]
   generate:
     command: ["score-argocd-cmp", "generate"]
+  provideGitCreds: true
