@@ -12,7 +12,7 @@ COPY internal/ internal/
 RUN CGO_ENABLED=0 go build -o /go/bin/score-argocd-cmp ./cmd/score-argocd-cmp
 
 FROM alpine:3.23
-RUN apk add --no-cache ca-certificates bash
+RUN apk add --no-cache ca-certificates bash git
 COPY --from=builder /go/bin/score-k8s /usr/local/bin/score-k8s
 COPY --from=builder /go/bin/score-argocd-cmp /usr/local/bin/score-argocd-cmp
 COPY plugin.yaml /home/argocd/cmp-server/config/plugin.yaml
