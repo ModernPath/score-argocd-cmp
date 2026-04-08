@@ -4,10 +4,11 @@ ArgoCD Config Management Plugin (CMP) sidecar that renders Score workload specs 
 
 ## Architecture
 
-- `plugin.yaml` — CMP definition: discover (score.yaml exists?), init (load provisioners), generate (render manifests to stdout)
+- `plugin.yaml` — CMP definition: discover, init, generate — all delegate to `score-argocd-cmp` binary
+- `score-argocd-cmp` binary wraps `score-k8s` with multi-workload support, image resolution, and parameter handling
 - `Dockerfile` — Multi-stage: builds score-k8s from source, produces minimal Alpine sidecar image
 - Runs as non-root user 999 alongside argocd-repo-server
-- ArgoCD passes `ARGOCD_ENV_*` vars from Application CR `spec.source.plugin.env`
+- ArgoCD passes parameters via `ARGOCD_APP_PARAMETERS` / `PARAM_*` env vars from Application CR `spec.source.plugin.parameters`
 
 ## Build & Test
 
@@ -19,13 +20,12 @@ make build SCORE_K8S_VERSION=v0.10.3    # Pin version
 
 ## Score Provisioners
 
-Provisioners map Score `resources:` types to Kubernetes objects. Files live in `provisioners/` and are baked into the image at `/opt/provisioners/`.
+Provisioners map Score `resources:` types to Kubernetes objects. Loaded at init time from a URL specified via the `provisioners-url` plugin parameter (`PARAM_PROVISIONERS_URL`).
 
 ### Key concepts
 
 - File format: YAML list of provisioner definitions, named `NN-name.provisioners.yaml`
 - Lower numbered prefix = higher priority; custom provisioners override score-k8s built-ins
-- Loaded via glob: `--provisioners /opt/provisioners/*.provisioners.yaml`
 - Template engine: Go templates with Sprig functions
 
 ### Template context variables
