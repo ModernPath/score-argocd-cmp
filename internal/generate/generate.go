@@ -37,8 +37,7 @@ func Run(dir string) (string, error) {
 		debug.LogCmd("score-k8s", args)
 		cmd := exec.Command("score-k8s", args...)
 		cmd.Dir = dir
-		cmd.Stderr = nil
-		if out, err := cmd.Output(); err != nil {
+		if out, err := cmd.CombinedOutput(); err != nil {
 			return "", fmt.Errorf("score-k8s generate %s: %w (output: %s)", f, err, string(out))
 		}
 	}

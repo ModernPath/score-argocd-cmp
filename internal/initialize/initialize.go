@@ -23,9 +23,8 @@ func Run(extra []string) error {
 
 	debug.LogCmd("score-k8s", args)
 	cmd := exec.Command("score-k8s", args...)
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("score-k8s init: %w", err)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("score-k8s init: %w (output: %s)", err, string(out))
 	}
 	return nil
 }
