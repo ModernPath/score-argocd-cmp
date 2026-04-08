@@ -11,6 +11,14 @@ import (
 // derived from PARAM_PROVISIONERS_URL env var.
 // Any extra arguments are passed through to score-k8s init.
 func Run(extra []string) error {
+	// Configure GCR credential helper so score-k8s can pull OCI provisioners
+	debug.LogCmd("docker-credential-gcr", []string{"configure-docker"})
+	gcr := exec.Command("docker-credential-gcr", "configure-docker")
+	gcr.Stderr = os.Stderr
+	if err := gcr.Run(); err != nil {
+		return fmt.Errorf("docker-credential-gcr configure-docker: %w", err)
+	}
+
 	args := []string{"init", "--no-sample"}
 
 	url := os.Getenv("PARAM_PROVISIONERS_URL")
