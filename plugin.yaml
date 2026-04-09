@@ -13,6 +13,12 @@ spec:
         title: Provisioners URL
         required: true
         string: ""
+      - name: no-default-provisioners
+        title: Disable default provisioners
+        string: "false"
+      - name: debug
+        title: Enable debug logging
+        string: "false"
     dynamic:
       command: ["score-argocd-cmp", "discover-params"]
   init:

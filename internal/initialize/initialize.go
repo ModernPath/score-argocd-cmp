@@ -19,6 +19,10 @@ func Run(extra []string) error {
 	}
 	args = append(args, "--provisioners", url)
 
+	if os.Getenv("PARAM_NO_DEFAULT_PROVISIONERS") == "true" {
+		args = append(args, "--no-default-provisioners")
+	}
+
 	args = append(args, extra...)
 
 	debug.LogCmd("score-k8s", args)

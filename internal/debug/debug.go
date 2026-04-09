@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var enabled = os.Getenv("SCORE_CMP_DEBUG") != ""
+var enabled = os.Getenv("SCORE_CMP_DEBUG") != "" || os.Getenv("PARAM_DEBUG") == "true"
 
 func Logf(format string, args ...any) {
 	if enabled {
