@@ -123,9 +123,9 @@ OUTPUT=$(docker run --rm \
   -v "${SCRIPT_DIR}/backend.score.yaml:/src/backend.score.yaml:ro" \
   -v "${SCRIPT_DIR}/frontend.score.yaml:/src/frontend.score.yaml:ro" \
   $PROV_VOLUMES \
-  -e ARGOCD_APP_PARAMETERS='[{"name":"image-backend","string":"my-registry/backend:v1.0"},{"name":"image-frontend","string":"my-registry/frontend:v2.0"}]' \
+  -e ARGOCD_APP_PARAMETERS='[{"name":"image-backend","string":"my-registry/backend:v1.0"},{"name":"image-frontend","string":"my-registry/frontend:v2.0"},{"name":"domain","string":"app.example.com"}]' \
   -e ARGOCD_APP_NAMESPACE=multi-ns \
-  -e ARGOCD_ENV_DOMAIN=app.example.com \
+  -e PARAM_DOMAIN=app.example.com \
   --user 999 \
   "$IMAGE" \
   bash -c "
@@ -170,6 +170,42 @@ if echo "$OUTPUT" | grep -q "HTTPRoute"; then
 else
   echo "FAIL: HTTPRoute not found in output"
   exit 1
+fi
+
+if echo "$OUTPUT" | grep -q "app.example.com"; then
+  echo "PASS: PARAM_DOMAIN propagated through DNS provisioner into rendered manifests"
+else
+  echo "FAIL: app.example.com not found in output (PARAM_DOMAIN did not flow through)"
+  exit 1
+fi
+
+echo ""
+echo "=== Test 10: discover-params auto-discovers PARAM_DOMAIN from provisioners ==="
+if [ -n "$PROV_DIR" ] && [ -d "$PROV_DIR" ]; then
+  # Build a single merged provisioners file we can point PARAM_PROVISIONERS_URL at.
+  TMP_PROV=$(mktemp -d)
+  trap 'rm -rf "$TMP_PROV"' EXIT
+  cat "$PROV_DIR"/*.provisioners.yaml > "$TMP_PROV/provisioners.yaml"
+
+  OUTPUT=$(docker run --rm \
+    -v "${SCRIPT_DIR}/backend.score.yaml:/work/backend.score.yaml:ro" \
+    -v "${SCRIPT_DIR}/frontend.score.yaml:/work/frontend.score.yaml:ro" \
+    -v "$TMP_PROV/provisioners.yaml:/work/provisioners.yaml:ro" \
+    -e PARAM_PROVISIONERS_URL=/work/provisioners.yaml \
+    -e PARAM_NO_DEFAULT_PROVISIONERS=true \
+    --user 999 \
+    "$IMAGE" \
+    sh -c 'cd /work && score-argocd-cmp discover-params')
+
+  if echo "$OUTPUT" | grep -q '"name":"domain"'; then
+    echo "PASS: discover-params announces auto-discovered domain parameter"
+  else
+    echo "FAIL: expected discover-params to announce 'domain' from provisioner scan"
+    echo "Output: $OUTPUT"
+    exit 1
+  fi
+else
+  echo "SKIP: provisioners directory not available, skipping discover-params auto-discovery test"
 fi
 
 echo ""
