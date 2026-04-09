@@ -33,7 +33,11 @@ func Run(dir string) (string, error) {
 		}
 		debug.Logf("resolved image for %s: %s", f, img)
 
-		args := []string{"generate", f, "--image", img, "--namespace", namespace}
+		args := []string{}
+		if debug.Enabled() {
+			args = append(args, "--verbose")
+		}
+		args = append(args, "generate", f, "--image", img, "--namespace", namespace)
 		debug.LogCmd("score-k8s", args)
 		cmd := exec.Command("score-k8s", args...)
 		cmd.Dir = dir

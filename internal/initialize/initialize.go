@@ -11,7 +11,11 @@ import (
 // derived from PARAM_PROVISIONERS_URL env var.
 // Any extra arguments are passed through to score-k8s init.
 func Run(extra []string) error {
-	args := []string{"init", "--no-sample"}
+	args := []string{}
+	if debug.Enabled() {
+		args = append(args, "--verbose")
+	}
+	args = append(args, "init", "--no-sample")
 
 	url := os.Getenv("PARAM_PROVISIONERS_URL")
 	if url == "" {

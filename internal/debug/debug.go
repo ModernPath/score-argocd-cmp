@@ -8,6 +8,10 @@ import (
 
 var enabled = os.Getenv("SCORE_CMP_DEBUG") != "" || os.Getenv("PARAM_DEBUG") == "true"
 
+func Enabled() bool {
+	return enabled
+}
+
 func Logf(format string, args ...any) {
 	if enabled {
 		fmt.Fprintf(os.Stderr, "[score-argocd-cmp] "+format+"\n", args...)
