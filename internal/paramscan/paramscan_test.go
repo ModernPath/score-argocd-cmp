@@ -45,6 +45,15 @@ func TestScanDir_DiscoversAndDedupesAndExcludesBuiltins(t *testing.T) {
     - "echo {{ env \"PARAM_REGION\" }} {{ env \"PARAM_TIER\" }}"
 `)
 
+	// Shell-style substitution (used by cmd:// provisioner args, where Go
+	// templates are not applied by score-k8s).
+	writeFile(t, filepath.Join(dir, "shell.yaml"), `
+- uri: cmd://sh
+  args:
+    - "-c"
+    - 'echo "${PARAM_BUCKET:-default}"'
+`)
+
 	// Duplicate of PARAM_DOMAIN to verify dedupe.
 	writeFile(t, filepath.Join(dir, "sub", "dup.yaml"), `# also uses {{ env "PARAM_DOMAIN" }}`)
 
@@ -55,7 +64,7 @@ func TestScanDir_DiscoversAndDedupesAndExcludesBuiltins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"PARAM_DOMAIN", "PARAM_REGION", "PARAM_TIER"}
+	want := []string{"PARAM_BUCKET", "PARAM_DOMAIN", "PARAM_REGION", "PARAM_TIER"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
