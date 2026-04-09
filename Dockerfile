@@ -18,6 +18,11 @@ COPY --from=builder /go/bin/docker-credential-gcr /usr/local/bin/docker-credenti
 COPY --from=builder /go/bin/score-k8s /usr/local/bin/score-k8s
 COPY --from=builder /go/bin/score-argocd-cmp /usr/local/bin/score-argocd-cmp
 COPY plugin.yaml /home/argocd/cmp-server/config/plugin.yaml
+
+# Patch templates baked into the image and applied unconditionally by `score-argocd-cmp init`.
+# See internal/initialize/initialize.go for the wiring and patches/*.tpl for the rationale.
+COPY patches/ /usr/local/share/score-argocd-cmp/patches/
+
 RUN mkdir -p /.docker && chown 999:999 /.docker && chmod 700 /.docker
 COPY --chown=999:999 --chmod=600 docker-config.json /.docker/config.json
 RUN mkdir /work && chown 999:999 /work
