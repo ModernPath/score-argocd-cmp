@@ -16,17 +16,10 @@ import (
 // The Dockerfile copies patches/ from the repo to this path.
 const patchTemplatesDir = "/usr/local/share/score-argocd-cmp/patches"
 
-// Run executes score-k8s init in the current working directory with the
-// appropriate provisioners flags derived from PARAM_PROVISIONERS_URL env var.
+// Run executes score-k8s init with the appropriate provisioners flags
+// derived from PARAM_PROVISIONERS_URL env var.
 // Any extra arguments are passed through to score-k8s init.
 func Run(extra []string) error {
-	return RunInDir("", extra)
-}
-
-// RunInDir is like Run but executes score-k8s init with its working directory
-// set to dir, so that the resulting .score-k8s/ state lives under dir. An
-// empty dir means inherit the caller's CWD (i.e. behave like Run).
-func RunInDir(dir string, extra []string) error {
 	args := []string{}
 	if debug.Enabled() {
 		args = append(args, "--verbose")
@@ -55,9 +48,6 @@ func RunInDir(dir string, extra []string) error {
 
 	debug.LogCmd("score-k8s", args)
 	cmd := exec.Command("score-k8s", args...)
-	if dir != "" {
-		cmd.Dir = dir
-	}
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("score-k8s init: %w (output: %s)", err, string(out))
 	}

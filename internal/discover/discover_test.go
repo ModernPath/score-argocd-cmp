@@ -7,14 +7,6 @@ import (
 	"testing"
 )
 
-// TestMain ensures PARAM_PROVISIONERS_URL is unset before any test runs so
-// that Params() takes the fast no-op discovery path. We don't want unit
-// tests to invoke score-k8s.
-func TestMain(m *testing.M) {
-	os.Unsetenv("PARAM_PROVISIONERS_URL")
-	os.Exit(m.Run())
-}
-
 func writeFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
