@@ -1,0 +1,54 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ConfigManagementPlugin
+metadata:
+  name: score-k8s
+spec:
+  version: v1.0
+  discover:
+    find:
+      command: ["score-argocd-cmp", "discover"]
+  parameters:
+    static:
+      - name: provisioners-url
+        title: Provisioners URL
+        tooltip: |
+          URI of the score provisioners bundle to load (e.g.
+          oci://registry/score-k8s-provisioners:v1.0.0, https://..., or a local
+          path). Passed verbatim to `score-k8s init --provisioners`.
+        required: true
+        collectionType: string
+        string: ""
+      - name: instance-name
+        title: Instance name
+        tooltip: |
+          Short, stable identifier used by score provisioners as a name
+          component for generated K8s objects (e.g. pg-<instance-name>-<id>).
+          Kept separate from ARGOCD_APP_NAME so the Argo Application name can
+          stay long and descriptive while rendered K8s names stay within the
+          63-char limit. Must be unique across deployments that share a
+          namespace.
+        required: true
+        collectionType: string
+        string: ""
+      - name: no-default-provisioners
+        title: Disable default provisioners
+        tooltip: |
+          When "true", passes --no-default-provisioners to `score-k8s init` so
+          the built-in upstream provisioners are not loaded and only the ones
+          from `provisioners-url` are used.
+        collectionType: string
+        string: "false"
+      - name: debug
+        title: Enable debug logging
+        tooltip: |
+          When "true", enables verbose logging in score-argocd-cmp and passes
+          --verbose to score-k8s. Useful for debugging plugin invocations from
+          the ArgoCD repo-server logs.
+        collectionType: string
+        string: "false"
+    dynamic:
+      command: ["score-argocd-cmp", "discover-params"]
+  init:
+    command: ["score-argocd-cmp", "init"]
+  generate:
+    command: ["score-argocd-cmp", "generate"]

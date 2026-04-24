@@ -1,0 +1,30 @@
+apiVersion: score.dev/v1b1
+metadata:
+  name: backend
+containers:
+  backend:
+    image: .
+    variables:
+      DATABASE_URL: "postgresql+asyncpg://${resources.db.username}:${resources.db.password}@${resources.db.host}:${resources.db.port}/${resources.db.database}"
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8000
+service:
+  ports:
+    web:
+      port: 8000
+      targetPort: 8000
+resources:
+  db:
+    type: postgres
+    id: shared-db
+  dns:
+    type: dns
+  route:
+    type: route
+    params:
+      host: ${resources.dns.host}
+      path: /api
+      port: web
+      pathRewrite: /

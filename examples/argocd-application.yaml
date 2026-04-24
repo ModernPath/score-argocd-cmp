@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello-world
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/your-app.git
+    targetRevision: main
+    path: .
+    plugin:
+      parameters:
+        - name: provisioners-url
+          string: "oci://ghcr.io/your-org/score-k8s-provisioners:v1.0.0"
+        - name: instance-name
+          string: "hello-world"
+        - name: image
+          string: "your-registry/hello-world:v1.0.0"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production

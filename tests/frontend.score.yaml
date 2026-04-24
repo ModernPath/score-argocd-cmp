@@ -1,0 +1,21 @@
+apiVersion: score.dev/v1b1
+metadata:
+  name: frontend
+containers:
+  app:
+    image: .
+service:
+  ports:
+    web:
+      port: 3000
+      targetPort: 3000
+resources:
+  dns:
+    type: dns
+    id: shared-dns
+  route:
+    type: route
+    params:
+      host: ${resources.dns.host}
+      path: /
+      port: web
